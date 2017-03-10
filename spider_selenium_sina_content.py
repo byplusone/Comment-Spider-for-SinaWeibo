@@ -172,8 +172,10 @@ def VisitPersonPage(user_id):
         print u'获取微博内容信息'
         num = 1
         #共查找1页的内容
+        comment_num = []
         while num <= 1:
-            url_wb = "http://weibo.cn/" + user_id + "?filter=0&page=" + str(num)
+        	#对原创微博进行爬取，内容质量较为正常，并且不会出现原微博评论链接混淆的情况
+            url_wb = "http://weibo.cn/" + user_id + "?filter=1&page=" + str(num)
             print url_wb
             driver.get(url_wb)
             info = driver.find_elements_by_xpath("//div[@class='c']")
@@ -211,6 +213,8 @@ def VisitPersonPage(user_id):
                     str3 = content.split(u" 评论")[-1]
                     if str3:
                         val3 = re.match(r'\[(.*?)\]', str3).groups()[0]
+                        #用队列comment_num储存每条微博的评论数
+                        comment_num.append(int(val3))
                         print u'评论数: ' + val3
                         infofile.write(u'评论数: ' + str(val3) + '\r\n')
 
@@ -246,50 +250,40 @@ def VisitPersonPage(user_id):
                 comment_URL = comment_URL.split('#')[0]
                 comment_URL_list.append(comment_URL)
 
-            #for url_cmmt in comment:
-            i = 0
-            for i in range(10):
-                cmmt_page = 1
-                temp_page = comment_URL_list.pop(0)
-                print u'评论信息'
-                while cmmt_page <= 10:
-                    dest_URL = temp_page+ "&page=" + str(cmmt_page) 
-                    driver.get(dest_URL)
-                    #class=ctt下直接找到评论内容
-                    #cmmt_text = driver.find_elements_by_xpath("//div[@class='c']")
-                    cmmt_text = driver.find_elements_by_xpath("//div[@class='c']/span[@class='ctt']")
-                    print '**********************************************\n'
-                    for j,value in enumerate(cmmt_text):
-                        #每一页第一条为原微博，直接跳过
-                        #if j == 0:
-                        #    continue
-                        '''
-                        print '#############User URL###############\n'
-                        comment_user = value.get_attribute("href")
-                        print comment_user
-                        print '###############END##################\n'
-                        '''
-                        info = value.text
-                        print info
-                        print '\n'
-                    print '**********************************************\n'
-                    #之前间接value.get_attribute("href")获取用户号失败，采取再按路径查找策略
-                    cmmt_user = driver.find_elements_by_xpath("//div[@class='c']/a")
-                    for p,value in enumerate(cmmt_user):
-
-                        if p % 2 == 0:
-                            value = value.get_attribute("href")
-                            print value
-                        else:
-                            continue
-
-                        #value = value.get_attribute("href")
-                        #print value
-                    cmmt_page += 1
-                    #print dest_URL
-                #print comment_URL_list[i]
-                i += 1
-
+            for url_cmmt in comment:
+            	i = 0
+            	temp_page = comment_URL_list.pop(0)
+            	cmmt_page = 1
+            	temp_cmmt_num = comment_num.pop(0)
+            	if temp_cmmt_num > 20:
+            		temp_cmmt_num -= 10
+            	while i < 1000 and temp_cmmt_num > 0:
+                	#cmmt_page = 1
+                	#temp_page = comment_URL_list.pop(0)
+                	dest_URL = temp_page+ "&page=" + str(cmmt_page)
+                	driver.get(dest_URL)
+                	if cmmt_page == 1:
+                		cmmt_text = driver.find_elements_by_xpath
+                	cmmt_text = driver.find_elements_by_xpath("//div[@class='c']/span[@class='ctt']")
+                	#微博评论的第一页会出现热门评论，导致最后temp_cmmt_num无法归零
+                	print '**********************************************\n'
+                	for j,value in enumerate(cmmt_text):   	        
+                		info = value.text
+                		i += 1
+                		temp_cmmt_num -= 1
+                		print info
+                		print '\n'
+                		print temp_cmmt_num
+                		print '\n'
+                	print '**********************************************\n'
+                	cmmt_user = driver.find_elements_by_xpath("//div[@class='c']/a[1]")
+                	for p,value in enumerate(cmmt_user):
+                		value = value.get_attribute("href")
+                		if p == 0 or p == len(cmmt_user)-1:
+                			continue
+                		else:
+                			print value
+        	        cmmt_page += 1
             num += 1
             print '\n\n'
         print '**********************************************'
@@ -311,8 +305,8 @@ def VisitPersonPage(user_id):
 if __name__ == '__main__':
 
     #定义变量
-    username = 'frank_q@sina.com'             #输入你的用户名
-    password = '112358'               #输入你的密码
+    username = '15800789716'             #输入你的用户名
+    password = 'QGHqghsgdtc'               #输入你的密码
     
     #用户id url+id访问个人
     #user_id = 'renzhiqiang'
@@ -334,7 +328,7 @@ if __name__ == '__main__':
     #在if __name__ == '__main__':引用全局变量不需要定义 global inforead 省略即可
     print 'Read file:'
     #user_id = inforead.readline()
-    workbook = xlrd.open_workbook(u"S03.xlsx")
+    workbook = xlrd.open_workbook(u"S_test.xlsx")
     #while user_id!="":
         #user_id = user_id.rstrip('\r\n')
         #VisitPersonPage(user_id)         #访问个人页面
