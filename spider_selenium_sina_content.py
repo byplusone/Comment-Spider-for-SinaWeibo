@@ -306,7 +306,7 @@ if __name__ == '__main__':
 
     #定义变量
     username = '15800789716'             #输入你的用户名
-    password = 'QGHqghsgdtc'               #输入你的密码
+    password = '***********'               #输入你的密码
     
     #用户id url+id访问个人
     #user_id = 'renzhiqiang'
