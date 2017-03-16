@@ -13,7 +13,15 @@ from selenium.webdriver.common.keys import Keys
 import selenium.webdriver.support.ui as ui        
 from selenium.webdriver.common.action_chains import ActionChains
 import xlrd
-import xlwt
+# 垃圾xlwt，最多只能操作256的数组大小
+# import xlwt
+# 垃圾openpyxl一点算数不友好
+# from openpyxl.workbook import Workbook  
+#万恶的ExcelWriter，妹的封装好了不早说，封装了很强大的excel写的功能  
+# from openpyxl.writer.excel import ExcelWriter  
+#一个eggache的数字转为列字母的方法  
+# from openpyxl.cell import get_column_letter
+import xlsxwriter
 
 
 #先调用无界面浏览器PhantomJS或Firefox    
@@ -27,7 +35,11 @@ wait = ui.WebDriverWait(driver,10)
 
 #全局变量 文件操作读写信息
 #inforead = codecs.open("SinaWeibo_List.txt", 'r', 'utf-8')
+writebook = xlsxwriter.Workbook('Expenses02.xlsx')
+sheet_info = writebook.add_worksheet()
+comment_user_info = writebook.add_worksheet()
 infofile = codecs.open("SinaWeibo_Info1.txt", 'a', 'utf-8')
+temp_row = 1 # 定义写操作时全局的当前操作的行数
 #infofile =  xlwt.Workbook()
 
 
@@ -95,10 +107,11 @@ def LoginWeibo(username, password):
 #        编码常见错误 UnicodeEncodeError: 'ascii' codec can't encode characters 
 #********************************************************************************
 
-def VisitPersonPage(user_id):
+def VisitPersonPage(user_id,user_num):
 
     try:
         global infofile
+        global temp_row
         
         print u'准备访问个人网站.....'
         #原创内容 http://weibo.cn/guangxianliuyan?filter=1&page=2
@@ -182,6 +195,7 @@ def VisitPersonPage(user_id):
             #print info #这里info是一组数，一个value代表一条消息
             #link_location =  driver.find_elements_by_xpath("//div[@class='c']/div[@class='cc']")
             #获取评论连接位置
+            weibo_num = 0
             for value in info:
                 #print value.text
                 content = value.text
@@ -228,6 +242,17 @@ def VisitPersonPage(user_id):
                     infofile.write(content[:content.rindex(u" 赞")] + '\r\n')
                     infofile.write('\r\n')
                     print '\n'
+    
+                    sheet_info.write(temp_row + weibo_num,1,user_num)							#第一列保存编号
+                    sheet_info.write(temp_row + weibo_num,2,num_name)							#第二列保存昵称
+                    sheet_info.write(temp_row + weibo_num,3,user_id) 							#第三列保存id
+                    sheet_info.write(temp_row + weibo_num,4,str4[:flag]) 						#第四列保存时间
+                    sheet_info.write(temp_row + weibo_num,5,content[:content.rindex(u" 赞")]) 	#第五列保存内容
+                    sheet_info.write(temp_row + weibo_num,6,str(val1))							#第六列保存点赞数
+                    sheet_info.write(temp_row + weibo_num,7,str(val2))							#第七列保存转发数
+                    sheet_info.write(temp_row + weibo_num,8,str(val3))							#第八列保存评论数
+					
+                    weibo_num += 1
 
                 else:
                     print u'跳过', content, '\n'
@@ -250,25 +275,33 @@ def VisitPersonPage(user_id):
                 comment_URL = comment_URL.split('#')[0]
                 comment_URL_list.append(comment_URL)
 
+            weibo_num = -1
             for url_cmmt in comment:
-            	i = 0
+            	weibo_num += 1
+            	i = 0 #评论计数
+            	temp_comment_num = 0 #评论用户地址计数
             	temp_page = comment_URL_list.pop(0)
             	cmmt_page = 1
             	temp_cmmt_num = comment_num.pop(0)
-            	if temp_cmmt_num > 20:
-            		temp_cmmt_num -= 10
-            	while i < 1000 and temp_cmmt_num > 0:
-                	#cmmt_page = 1
-                	#temp_page = comment_URL_list.pop(0)
+            	# 无法判断是否是热评，只能选择对于评论数过多的微博直接减去一个预测的首页热评数
+            	# 新浪微博显示的评论数有水分，统计实验一条显示评论为270的微博实际可以看到的评论为242，一条显示评论为1670的微博实际只可以看到443
+            	if temp_cmmt_num > 20 and temp_cmmt_num <= 100:
+            		temp_cmmt_num -= 15
+            	elif temp_cmmt_num > 100 and temp_cmmt_num <=400:
+            		temp_cmmt_num -= 40 # 发现400条以内的微博40条评论水分已经不算多了2333
+
+            	while i < 400 and temp_cmmt_num > 0:
                 	dest_URL = temp_page+ "&page=" + str(cmmt_page)
                 	driver.get(dest_URL)
                 	if cmmt_page == 1:
                 		cmmt_text = driver.find_elements_by_xpath
                 	cmmt_text = driver.find_elements_by_xpath("//div[@class='c']/span[@class='ctt']")
-                	#微博评论的第一页会出现热门评论，导致最后temp_cmmt_num无法归零
+                	# 微博评论的第一页会出现热门评论，导致最后temp_cmmt_num无法归零
+                	# 已通过直接减除水分解决
                 	print '**********************************************\n'
                 	for j,value in enumerate(cmmt_text):   	        
                 		info = value.text
+                		sheet_info.write(temp_row + weibo_num,i+9,info)
                 		i += 1
                 		temp_cmmt_num -= 1
                 		print info
@@ -282,9 +315,12 @@ def VisitPersonPage(user_id):
                 		if p == 0 or p == len(cmmt_user)-1:
                 			continue
                 		else:
+                			comment_user_info.write(temp_comment_num,temp_row + weibo_num, value)
+                			temp_comment_num += 1
                 			print value
         	        cmmt_page += 1
             num += 1
+            temp_row += weibo_num
             print '\n\n'
         print '**********************************************'
             
@@ -305,8 +341,8 @@ def VisitPersonPage(user_id):
 if __name__ == '__main__':
 
     #定义变量
-    username = '15800789716'             #输入你的用户名
-    password = '***********'               #输入你的密码
+    username = '******'             #输入你的用户名
+    password = '******'               #输入你的密码
     
     #用户id url+id访问个人
     #user_id = 'renzhiqiang'
@@ -328,7 +364,7 @@ if __name__ == '__main__':
     #在if __name__ == '__main__':引用全局变量不需要定义 global inforead 省略即可
     print 'Read file:'
     #user_id = inforead.readline()
-    workbook = xlrd.open_workbook(u"S_test.xlsx")
+    workbook = xlrd.open_workbook(u"S_test2.xlsx")
     #while user_id!="":
         #user_id = user_id.rstrip('\r\n')
         #VisitPersonPage(user_id)         #访问个人页面
@@ -336,11 +372,13 @@ if __name__ == '__main__':
         #break
     sheet1 = workbook.sheet_by_index(0)
     cols = sheet1.col_values(3) # 获取第四列内容
-    for user_id in cols:
+    cols_user_num = sheet1.col_values(0) # 获取第一列的用户编号
+    for num,user_id in enumerate(cols):
         print user_id
-        VisitPersonPage(str(int(user_id)))
+        user_num = cols_user_num[num - 1]# num从1开始，访问数组则应从0开始
+        VisitPersonPage(str(int(user_id)),user_num)
 
-    
+    writebook.close()
     infofile.close()
     #inforead.close()
     
