@@ -285,10 +285,10 @@ def VisitPersonPage(user_id,user_num):
             	temp_cmmt_num = comment_num.pop(0)
             	# 无法判断是否是热评，只能选择对于评论数过多的微博直接减去一个预测的首页热评数
             	# 新浪微博显示的评论数有水分，统计实验一条显示评论为270的微博实际可以看到的评论为242，一条显示评论为1670的微博实际只可以看到443
-            	if temp_cmmt_num > 20 and temp_cmmt_num <= 100:
+            	if temp_cmmt_num > 20:
             		temp_cmmt_num -= 15
-            	elif temp_cmmt_num > 100 and temp_cmmt_num <=400:
-            		temp_cmmt_num -= 40 # 发现400条以内的微博40条评论水分已经不算多了2333
+            	#elif temp_cmmt_num > 100 and temp_cmmt_num <=400:
+            	#	temp_cmmt_num -= 40 # 发现400条以内的微博40条评论水分已经不算多了2333
 
             	while i < 400 and temp_cmmt_num > 0:
                 	dest_URL = temp_page+ "&page=" + str(cmmt_page)
@@ -298,27 +298,31 @@ def VisitPersonPage(user_id,user_num):
                 	cmmt_text = driver.find_elements_by_xpath("//div[@class='c']/span[@class='ctt']")
                 	# 微博评论的第一页会出现热门评论，导致最后temp_cmmt_num无法归零
                 	# 已通过直接减除水分解决
-                	print '**********************************************\n'
-                	for j,value in enumerate(cmmt_text):   	        
-                		info = value.text
-                		sheet_info.write(temp_row + weibo_num,i+9,info)
-                		i += 1
-                		temp_cmmt_num -= 1
-                		print info
-                		print '\n'
-                		print temp_cmmt_num
-                		print '\n'
-                	print '**********************************************\n'
-                	cmmt_user = driver.find_elements_by_xpath("//div[@class='c']/a[1]")
-                	for p,value in enumerate(cmmt_user):
-                		value = value.get_attribute("href")
-                		if p == 0 or p == len(cmmt_user)-1:
-                			continue
-                		else:
-                			comment_user_info.write(temp_comment_num,temp_row + weibo_num, value)
-                			temp_comment_num += 1
-                			print value
-        	        cmmt_page += 1
+                	if cmmt_text:
+                		print '**********************************************\n'
+                		for j,value in enumerate(cmmt_text):   	        
+                			info = value.text
+                			sheet_info.write(temp_row + weibo_num,i+9,info)
+                			i += 1
+                			temp_cmmt_num -= 1
+                			print info
+                			print '\n'
+                			print temp_cmmt_num
+                			print '\n'
+                		print '**********************************************\n'
+                		cmmt_user = driver.find_elements_by_xpath("//div[@class='c']/a[1]")
+                		for p,value in enumerate(cmmt_user):
+                			value = value.get_attribute("href")
+                			if p == 0 or p == len(cmmt_user)-1:
+                				continue
+                			else:
+                				comment_user_info.write(temp_comment_num,temp_row + weibo_num, value)
+                				temp_comment_num += 1
+                				print value
+        	        	cmmt_page += 1
+        	        else:
+        	        	print "2333333333333333333333"
+        	        	break
             num += 1
             temp_row += weibo_num
             print '\n\n'
@@ -364,7 +368,7 @@ if __name__ == '__main__':
     #在if __name__ == '__main__':引用全局变量不需要定义 global inforead 省略即可
     print 'Read file:'
     #user_id = inforead.readline()
-    workbook = xlrd.open_workbook(u"S_test2.xlsx")
+    workbook = xlrd.open_workbook(u"S_test3.xlsx")
     #while user_id!="":
         #user_id = user_id.rstrip('\r\n')
         #VisitPersonPage(user_id)         #访问个人页面
